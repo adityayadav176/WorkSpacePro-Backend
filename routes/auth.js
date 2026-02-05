@@ -3,7 +3,8 @@ const User = require('../models/User');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+let jwt = require('jsonwebtoken');
+const fetchuser = require('../middleware/fetchuser');
 
 const JWT_SECRET = 'MyNameIsAdityaIamAutherOfWorkspace'
 // Todo improvement env.local salt and jwt token  and small mistake database queries and 
@@ -97,5 +98,14 @@ router.post('/login', [
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
+//get loggdin user details: POST "/api/auth/getuser" does't require auth
+router.get('/getuser', fetchuser, async (req, res) => {
+  try {
+    const userId = req.user.id; // from middleware
+    const user = await User.findById(userId).select("-password");
+    res.send(user);
+  } catch (error) {
+    res.status(500).send("Server Error");
+  }
+});
 module.exports = router;
