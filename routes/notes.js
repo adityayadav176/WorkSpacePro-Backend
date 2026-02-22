@@ -42,7 +42,7 @@ router.post('/addNote',  fetchuser,
       });
 
       const saveNotes = await note.save();
-      res.status(200).send({ success: true, saveNotes })
+      res.status(200).send(saveNotes)
 
         // If Any Error Occured Then Show The Error 
     } catch (error) {
@@ -95,7 +95,7 @@ router.put('/updateNote/:id', [
     const newNote = {};
     if (title) { newNote.title = title };
     if (description) { newNote.description = description };
-    if (title) { newNote.tag = tag };
+    if (tag) { newNote.tag = tag };
 
     // find the note to be updated and updated it
     let note = await Notes.findById(req.params.id)
