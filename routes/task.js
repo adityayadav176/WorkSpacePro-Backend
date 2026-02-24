@@ -16,7 +16,7 @@ router.get('/fetchAllTask', fetchuser, async (req, res) => {
   }
 });
 //ROUTE 2 Add Task: POST "/api/task/AddTask" required Login.
-router.post('/AddTask', fetchuser, [
+router.post('/addTask', fetchuser, [
   body('title').isLength({ min: 3 }),
   body('description', "Description must be atleast 5 character").isLength({ min: 5 }),
 ], async (req, res) => {
@@ -38,7 +38,7 @@ router.post('/AddTask', fetchuser, [
   })
   // Task save
   const savedTask = await newTask.save()
-  res.status(200).send({ success: true, savedTask })
+  res.status(200).send({ success: true, savedTask: savedTask })
   // if error occured then send bad request and the error
   } catch (error) {
     console.error(error);
