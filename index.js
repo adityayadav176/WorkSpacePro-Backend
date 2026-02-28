@@ -15,6 +15,6 @@ app.use('/api/auth', require('./routes/auth'))
 app.use('/api/notes', require('./routes/notes'))
 app.use('/api/task', require('./routes/task'))
 
-app.listen(port, () => { 
+app.listen(port, "0.0.0.0", () => { 
   console.log(`Workspace Server listening at http://localhost:${port}`)
 })
