@@ -58,7 +58,7 @@ router.put('/updateTask/:id', [
     const newTask = {};
     if (title) { newTask.title = title };
     if (description) { newTask.description = description };
-    if (title) { newTask.tag = tag };
+    if (tag) { newTask.tag = tag };
     if(priority){newTask.priority = priority}
     if(status){newTask.status = status}
 
