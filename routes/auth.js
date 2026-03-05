@@ -5,7 +5,6 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 let jwt = require('jsonwebtoken');
 const fetchuser = require('../middleware/fetchuser');
-const JWT_SECRET = 'MyNameIsAdityaIamAutherOfWorkspace'
 
 // Todo improvement env.local salt and jwt token  and small mistake database queries and 
 //ROUTE 1 Create a User using: POST "/api/auth/Signup" does't require auth
@@ -47,7 +46,7 @@ router.post('/Signup', [
           id: user.id
         }
       }
-      const authtoken = jwt.sign(data, JWT_SECRET)
+      const authtoken = jwt.sign(data, process.env.JWT_SECRET)
       res.status(200).json({ success: true, user: authtoken })
     }
   } catch (error) {
@@ -93,7 +92,7 @@ router.post('/login', [
       user: { id: user.id }
     };
     // CHECK THE USER
-    const authtoken = jwt.sign(data, JWT_SECRET);
+    const authtoken = jwt.sign(data, process.env.JWT_SECRET);
     // SEND THE RESPONSE 
     res.status(200).json({ success: true, authtoken });
     // IF THERE ARE SOME ERROR THAN RETURN BAD REQUEST AND THE ERROR 
