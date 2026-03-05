@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-
+const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
@@ -14,8 +14,8 @@ app.use('/api/task', require('./routes/task'));
 
 const startServer = async () => {
   await connectToMongo();   
-  app.listen(process.env.PORT, "0.0.0.0", () => {
-    console.log(`Workspace Server listening at http://localhost:${process.env.PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Workspace Server listening at http://localhost:${PORT}`);
   });
 };
 
