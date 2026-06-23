@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {notes} from "../models/Notes.js"
+import {Notes} from "../models/Notes.model.js"
 import mongoose from "mongoose"
 import { fetchuser } from "../middleware/fetchuser.js"
 
@@ -18,7 +18,7 @@ const createNote = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthenticated Access Denied");
     }
 
-    const note = await notes.create({
+    const note = await Notes.create({
         title: title.trim(),
         description: description.trim(),
         tag: tag,
@@ -63,26 +63,27 @@ const updateNote = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Note ID");
     }
 
-    const note = await notes.findOne({
-        _id: noteId,
-        user: req.user._id,
-    });
+    const note = await Notes.findOneAndUpdate(
+            {
+                _id: noteId,
+                user: req.user._id
+            },
+            {
+                $set: {
+                    title,
+                    description,
+                    tag,
+                }
+            },
+            { new: true }
+        );
 
     if (!note) {
         throw new ApiError(404, "Note not found");
     }
 
-    if (title !== undefined) note.title = title.trim();
-    if (description !== undefined) note.description = description.trim();
-
-    if (tags !== undefined) {
-        note.tags = tags.map(tag => tag.trim().toLowerCase());
-    }
-
-    const updatedNote = await note.save();
-
     return res.status(200).json(
-        new ApiResponse(200, updatedNote, "Note updated successfully")
+        new ApiResponse(200, note, "Note updated successfully")
     );
 });
 
@@ -93,35 +94,52 @@ const getAllNotes = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized access");
     }
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const skip = (page - 1) * limit;
 
-    const search = req.query.search || "";
+    const { search, tag } = req.query;
 
     const query = {
-        user: userId,
-        title: { $regex: search, $options: "i" }, // case-insensitive search
+        user: userId
     };
 
-    const Notes = await notes.find(query)
-        .sort({ createdAt: -1 }) // latest first
+    if (search?.trim()) {
+        query.$text = {
+            $search: search.trim()
+        };
+    }
+
+    if (tag) {
+        query.tag = tag.toLowerCase();
+    }
+
+    const notes = await Notes.find(query)
+        .sort(
+            search
+                ? { score: { $meta: "textScore" } }
+                : { createdAt: -1 }
+        )
         .skip(skip)
         .limit(limit);
 
-    const totalNotes = await notes.countDocuments(query);
+    const totalNotes = await Notes.countDocuments(query);
 
     return res.status(200).json(
-        new ApiResponse(200, {
-            Notes,
-            pagination: {
-                totalNotes,
-                currentPage: page,
-                totalPages: Math.ceil(totalNotes / limit),
-                hasNextPage: page * limit < totalNotes,
+        new ApiResponse(
+            200,
+            {
+                notes,
+                pagination: {
+                    totalNotes,
+                    currentPage: page,
+                    totalPages: Math.ceil(totalNotes / limit),
+                    hasNextPage: page * limit < totalNotes,
+                    hasPrevPage: page > 1
+                }
             },
-        }, "Notes fetched successfully")
+            "Notes fetched successfully"
+        )
     );
 });
 

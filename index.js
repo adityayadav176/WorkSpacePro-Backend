@@ -12,11 +12,13 @@ app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
 
-import authRouter from "./src/routes/auth.js"
-import NoteRouter from "./src/routes/notes.js"
+import authRouter from "./src/routes/auth.routes.js"
+import NoteRouter from "./src/routes/notes.routes.js"
+import taskRouter from "./src/routes/task.routes.js"
 
 app.use('/api/notes', NoteRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/task', taskRouter);
 
 const startServer = async () => {
   await connectToMongo();
