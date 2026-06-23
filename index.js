@@ -1,23 +1,28 @@
-require('dotenv').config();
-const connectToMongo = require('./db');
-const express = require('express');
-const cors = require('cors');
+import dotenv from "dotenv";
+import cors from "cors";
+import { connectToMongo } from "./db.js";
+import express from "express";
+import cookieParser from "cookie-parser";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/notes', require('./routes/notes'));
-app.use('/api/task', require('./routes/task'));
+import authRouter from "./src/routes/auth.js"
+import NoteRouter from "./src/routes/notes.js"
+
+app.use('/api/notes', NoteRouter);
+app.use('/api/auth', authRouter);
 
 const startServer = async () => {
-  await connectToMongo();   
-  app.listen(PORT, "0.0.0.0", () => {
+  await connectToMongo();
+  app.listen(PORT, () => {
     console.log(`Workspace Server listening at http://localhost:${PORT}`);
   });
 };
 
 startServer();
-

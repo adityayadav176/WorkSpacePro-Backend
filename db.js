@@ -1,13 +1,15 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose"
 
 const connectToMongo = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Connected to Mongo successfully");
+    console.log("Connected to Mongo successfully");
   } catch (error) {
-    console.error("❌ Mongo connection error:", error.message);
+    console.error("Mongo connection error:", error.message);
     process.exit(1);
   }
 };
 
-module.exports = connectToMongo;
+export {
+  connectToMongo
+}
