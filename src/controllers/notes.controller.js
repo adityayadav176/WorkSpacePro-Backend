@@ -57,7 +57,7 @@ const deleteNote = asyncHandler(async (req, res) => {
 
 const updateNote = asyncHandler(async (req, res) => {
     const { noteId } = req.params;
-    const { title, description, tags } = req.body;
+    const { title, description, tag } = req.body;
 
     if (!noteId || !mongoose.isValidObjectId(noteId)) {
         throw new ApiError(400, "Invalid Note ID");
