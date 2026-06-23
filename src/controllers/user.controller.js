@@ -75,8 +75,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "none",          
+        secure: false,
+        sameSite: "lax",          
         maxAge: 7 * 24 * 60 * 60 * 1000 
     }
 

@@ -27,11 +27,10 @@ const NotesSchema = new Schema(
             type: String,
             required: true,
             enum: [
-                "study",
                 "work",
                 "personal",
-                "interview",
-                "project",
+                "ideas",
+                "general",
                 "important"
             ],
             lowercase: true,
