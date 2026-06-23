@@ -1,8 +1,8 @@
-import Router from "express"
+import express from "express"
 import { createNote, deleteNote, getAllNotes, updateNote } from "../controllers/notes.controller.js"
 import { fetchuser } from "../middleware/fetchuser.js";
 
-const router = Router();
+const router = express.Router();
 
 router.post("/addNote", fetchuser, createNote);
 router.delete("/deleteNote/:noteId",fetchuser, deleteNote);
