@@ -30,18 +30,27 @@ const addTask = asyncHandler(async (req, res) => {
     }
 
     return res.status(201).json({
-        success: true,
-        task
+        data: task
     });
 });
 
 const updateTask = asyncHandler(async (req, res) => {
     const { TaskId } = req.params;
-    const { title, description, tag, priority, status } = req.body;
-
+    
     if (!TaskId || !mongoose.isValidObjectId(TaskId)) {
-        throw new ApiError(400, "Invalid Note ID");
+        throw new ApiError(400, "Invalid Task ID");
     }
+
+   
+    const updateFields = {};
+ 
+
+    if (req.body.title !== undefined) updateFields.title = req.body.title;
+    if (req.body.description !== undefined) updateFields.description = req.body.description;
+    if (req.body.tag !== undefined) updateFields.tag = req.body.tag;
+    if (req.body.priority !== undefined) updateFields.priority = req.body.priority;
+    if (req.body.status !== undefined) updateFields.status = req.body.status;
+
 
     const task = await Task.findOneAndUpdate(
         {
@@ -49,15 +58,9 @@ const updateTask = asyncHandler(async (req, res) => {
             user: req.user._id
         },
         {
-            $set: {
-                title,
-                description,
-                tag,
-                priority,
-                status
-            }
+            $set: updateFields 
         },
-        { new: true }
+        { new: true, runValidators: true }
     );
 
     if (!task) {
@@ -65,7 +68,7 @@ const updateTask = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(
-        new ApiResponse(200, task, "Task Update Successfully")
+        new ApiResponse(200, task, "Task Updated Successfully")
     );
 });
 

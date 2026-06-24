@@ -4,11 +4,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const fetchuser = asyncHandler(async (req, res, next) => {
-    console.log("All Cookies:", req.cookie);
-console.log("Token Cookie:", req.cookie.token);
     let token;
 
-    if (req.cookies?.token) {
+    if (req.cookies.token) {
         token = req.cookies.token;
     } else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
         token = req.headers.authorization.split(" ")[1];

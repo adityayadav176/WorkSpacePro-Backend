@@ -73,18 +73,23 @@ const loginUser = asyncHandler(async (req, res) => {
         mobileNo: user.mobileNo
     };
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     const options = {
+        path: "/",
         httpOnly: true,
-        secure: false,
-        sameSite: "lax",          
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000 
-    }
+    };
+
+    res.cookie("token", token, options);
 
     return res.status(200)
-    .cookie("token", token, options)
-    .json(
-        new ApiResponse(200, { user: safeUser, token }, "Login successful")
-    );
+        .cookie("token", token)
+        .json(
+            new ApiResponse(200, { user: safeUser, token }, "Login successful")
+        );
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {

@@ -8,16 +8,16 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.use(cookieParser());
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://work-space-pro-frontend-l8bx.vercel.app"
-    ],
-    credentials: true
+    origin: ["http://127.0.0.1:5500", "http://localhost:3000", "http://127.0.0.1:5500/first.html"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
-app.use(cookieParser());
+
 app.use(express.json());
 
 import authRouter from "./src/routes/auth.routes.js"
