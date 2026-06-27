@@ -25,6 +25,7 @@ app.use(
 
 app.use(express.json());
 
+
 app.get("/", (req, res) => {
   res.send("API IS WORKING....");
 })
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 import authRouter from "./src/routes/auth.routes.js"
 import NoteRouter from "./src/routes/notes.routes.js"
 import taskRouter from "./src/routes/task.routes.js"
+import errorMiddleware from "./src/middleware/error.middleware.js";
 
 app.use('/api/notes', NoteRouter);
 app.use('/api/auth', authRouter);
@@ -43,5 +45,6 @@ const startServer = async () => {
     console.log(`Workspace Server listening at http://localhost:${PORT}`);
   });
 };
+app.use(errorMiddleware);
 
 startServer();
