@@ -13,7 +13,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://work-space-pro-frontend-pkmsqnn36.vercel.app", 
+      "https://work-space-pro-frontend.vercel.app", 
       "http://localhost:3000",
       "http://localhost:5173"
     ],
