@@ -25,7 +25,7 @@ app.use(
 
 app.use(express.json());
 
-app.use("/", (req, res) => {
+app.get("/", (req, res) => {
   res.send("API IS WORKING....");
 })
 
