@@ -25,6 +25,10 @@ app.use(
 
 app.use(express.json());
 
+app.use("/", (req, res) => {
+  res.send("API IS WORKING....");
+})
+
 import authRouter from "./src/routes/auth.routes.js"
 import NoteRouter from "./src/routes/notes.routes.js"
 import taskRouter from "./src/routes/task.routes.js"
