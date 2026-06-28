@@ -138,28 +138,30 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     const ONE_HOUR = 60 * 60 * 1000;
 
-    // init safely
-    user.otpRequestCount = user.otpRequestCount || 0;
-    user.otpRequestTime = user.otpRequestTime || Date.now();
-
-    // reset window
-    if (Date.now() - user.otpRequestTime > ONE_HOUR) {
+    // Reset window if an hour has actually passed since the FIRST request
+    if (user.otpRequestTime && (Date.now() - user.otpRequestTime > ONE_HOUR)) {
         user.otpRequestCount = 0;
-        user.otpRequestTime = Date.now();
+        user.otpRequestTime = undefined; // Clear it so it initializes fresh
     }
 
-    // rate limit FIXED
+    // Initialize tracking fields if they don't exist
+    if (!user.otpRequestTime || user.otpRequestCount === 0) {
+        user.otpRequestTime = Date.now(); // Lock the window baseline here
+        user.otpRequestCount = 0;
+    }
+
+    // Rate limit check
     if (user.otpRequestCount >= 3) {
         throw new ApiError(429, "Too many OTP requests. Try again after 1 hour.");
     }
 
-    // auto clear expired OTP FIRST (important)
+    // Auto clear expired OTP
     if (user.resetPasswordOTPExpire && user.resetPasswordOTPExpire < Date.now()) {
         user.resetPasswordOTP = undefined;
         user.resetPasswordOTPExpire = undefined;
     }
 
-    // block active OTP
+    // Block active OTP
     if (user.resetPasswordOTP && user.resetPasswordOTPExpire > Date.now()) {
         throw new ApiError(429, "OTP already sent. Please wait before requesting a new one.");
     }
