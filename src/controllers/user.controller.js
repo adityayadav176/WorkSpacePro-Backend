@@ -137,35 +137,49 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     const ONE_HOUR = 60 * 60 * 1000;
 
-    if (user.otpRequestTime && Date.now() - user.otpRequestTime > ONE_HOUR) {
+    // initialize counters safely
+    if (!user.otpRequestCount) user.otpRequestCount = 0;
+    if (!user.otpRequestTime) user.otpRequestTime = Date.now();
+
+    // reset counter after 1 hour window
+    if (Date.now() - user.otpRequestTime > ONE_HOUR) {
         user.otpRequestCount = 0;
         user.otpRequestTime = Date.now();
     }
 
-    if (!user.otpRequestTime) {
-        user.otpRequestTime = Date.now();
-    }
-
+    // rate limit
     if (user.otpRequestCount > 3) {
         throw new ApiError(429, "Too many OTP requests. Try again after 1 hour.");
     }
 
-    if (user.resetPasswordOTP && user.resetPasswordOTPExpire > Date.now()) {
-        throw new ApiError(400, "OTP already sent. Please wait before requesting a new one.");
+    // expire old OTP automatically
+    if (user.resetPasswordOTPExpire && user.resetPasswordOTPExpire < Date.now()) {
+        user.resetPasswordOTP = undefined;
+        user.resetPasswordOTPExpire = undefined;
     }
+
+    // prevent spam resend if OTP still active
+    if (user.resetPasswordOTP && user.resetPasswordOTPExpire > Date.now()) {
+        throw new ApiError(429, "OTP already sent. Please wait before requesting a new one.");
+    }
+
+    // generate OTP
     const otp = generateOTP();
 
+    // hash OTP
     user.resetPasswordOTP = await hashOTP(otp, 10);
-    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000; // 10 min
 
     user.otpRequestCount += 1;
+    user.otpRequestTime = user.otpRequestTime || Date.now();
 
     await user.save({ validateBeforeSave: false });
 
+    // send email
     await sendEmail({
         to: user.email,
         subject: "Workspace Pro Password Reset OTP",
-        html: passwordResetOTPTemplate(otp)
+        html: passwordResetOTPTemplate(otp),
     });
 
     return res.status(200).json(
@@ -197,6 +211,8 @@ const resetPassword = asyncHandler(async (req, res) => {
     user.password = password;
     user.resetPasswordOTP = undefined;
     user.resetPasswordOTPExpire = undefined;
+    user.otpRequestCount = 0;
+    user.otpRequestTime = Date.now();
 
     await user.save({ validateBeforeSave: false });
 
