@@ -129,6 +129,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
 
+    // Always same response for security
     if (!user) {
         return res.status(200).json(
             new ApiResponse(200, {}, "If an account exists, an OTP has been sent.")
@@ -137,45 +138,41 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     const ONE_HOUR = 60 * 60 * 1000;
 
-    // initialize counters safely
-    if (!user.otpRequestCount) user.otpRequestCount = 0;
-    if (!user.otpRequestTime) user.otpRequestTime = Date.now();
+    // init safely
+    user.otpRequestCount = user.otpRequestCount || 0;
+    user.otpRequestTime = user.otpRequestTime || Date.now();
 
-    // reset counter after 1 hour window
+    // reset window
     if (Date.now() - user.otpRequestTime > ONE_HOUR) {
         user.otpRequestCount = 0;
         user.otpRequestTime = Date.now();
     }
 
-    // rate limit
-    if (user.otpRequestCount > 3) {
+    // rate limit FIXED
+    if (user.otpRequestCount >= 3) {
         throw new ApiError(429, "Too many OTP requests. Try again after 1 hour.");
     }
 
-    // expire old OTP automatically
+    // auto clear expired OTP FIRST (important)
     if (user.resetPasswordOTPExpire && user.resetPasswordOTPExpire < Date.now()) {
         user.resetPasswordOTP = undefined;
         user.resetPasswordOTPExpire = undefined;
     }
 
-    // prevent spam resend if OTP still active
+    // block active OTP
     if (user.resetPasswordOTP && user.resetPasswordOTPExpire > Date.now()) {
         throw new ApiError(429, "OTP already sent. Please wait before requesting a new one.");
     }
 
-    // generate OTP
     const otp = generateOTP();
 
-    // hash OTP
     user.resetPasswordOTP = await hashOTP(otp, 10);
-    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000; // 10 min
+    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
 
     user.otpRequestCount += 1;
-    user.otpRequestTime = user.otpRequestTime || Date.now();
 
     await user.save({ validateBeforeSave: false });
 
-    // send email
     await sendEmail({
         to: user.email,
         subject: "Workspace Pro Password Reset OTP",
@@ -197,20 +194,25 @@ const resetPassword = asyncHandler(async (req, res) => {
     const user = await User.findOne({
         email,
         resetPasswordOTPExpire: { $gt: Date.now() }
-    }).select("+password");
+    }).select("+password resetPasswordOTP resetPasswordOTPExpire");
 
     if (!user) {
         throw new ApiError(400, "Invalid or expired OTP");
     }
 
     const isOTPValid = await compareOTP(otp, user.resetPasswordOTP);
+
     if (!isOTPValid) {
         throw new ApiError(400, "Invalid OTP");
     }
 
     user.password = password;
+
+    // clear OTP data
     user.resetPasswordOTP = undefined;
     user.resetPasswordOTPExpire = undefined;
+
+    // reset counters safely
     user.otpRequestCount = 0;
     user.otpRequestTime = Date.now();
 
