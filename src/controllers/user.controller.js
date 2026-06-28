@@ -4,16 +4,34 @@ import { User } from "../models/User.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { compareOTP, generateOTP, hashOTP } from "../utils/generateOtp.js";
+import { sendEmail } from "../utils/nodemailer.js";
+import { passwordResetOTPTemplate } from "../utils/template.js";
+
+const getCookieOptions = () => {
+    const isProduction = process.env.NODE_ENV === "production";
+    return {
+        path: "/",
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    };
+};
 
 const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password, mobileNo } = req.body;
+
+    if (!name || !email || !password || !mobileNo) {
+        throw new ApiError(400, "All fields are required");
+    }
 
     const existingUser = await User.findOne({
         $or: [{ email }, { mobileNo }]
     });
 
     if (existingUser) {
-        throw new ApiError(400, "User already exists");
+        throw new ApiError(400, "User with this email or mobile number already exists");
     }
 
     const user = await User.create({
@@ -73,22 +91,11 @@ const loginUser = asyncHandler(async (req, res) => {
         mobileNo: user.mobileNo
     };
 
-    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie("token", token, getCookieOptions());
 
-    const options = {
-        path: "/",
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000 
-    };
-
-    res.cookie("token", token, options);
-
-    return res.status(200)
-        .json(
-            new ApiResponse(200, { user: safeUser, token }, "Login successful")
-        );
+    return res.status(200).json(
+        new ApiResponse(200, { user: safeUser, token }, "Login successful")
+    );
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -104,24 +111,85 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-
-    const options = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-    };
+    const options = getCookieOptions();
+    delete options.maxAge;
 
     return res
         .status(200)
         .clearCookie("token", options)
-        .json(
-            new ApiResponse(200, null, "Logged out successfully")
+        .json(new ApiResponse(200, null, "Logged out successfully"));
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(200).json(
+            new ApiResponse(200, {}, "If an account exists, an OTP has been sent.")
         );
+    }
+
+    const otp = generateOTP();
+
+    user.resetPasswordOTP = await hashOTP(otp, 10);
+    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    await sendEmail({
+        to: user.email,
+        subject: "Workspace Pro Password Reset OTP",
+        html: passwordResetOTPTemplate(otp)
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "OTP sent successfully.")
+    );
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { email, otp, password } = req.body;
+
+    if (!email || !otp || !password) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const user = await User.findOne({
+        email,
+        resetPasswordOTPExpire: { $gt: Date.now() }
+    }).select("+password"); 
+
+    if (!user) {
+        throw new ApiError(400, "Invalid or expired OTP");
+    }
+
+    const isOTPValid = await compareOTP(otp, user.resetPasswordOTP);
+    if (!isOTPValid) {
+        throw new ApiError(400, "Invalid OTP");
+    }
+
+    user.password = password;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpire = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Password reset successfully.")
+    );
 });
 
 export {
     loginUser,
     logoutUser,
     registerUser,
-    getCurrentUser
-}
+    getCurrentUser,
+    resetPassword,
+    forgotPassword
+};
