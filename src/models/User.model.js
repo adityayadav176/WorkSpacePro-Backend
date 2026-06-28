@@ -37,14 +37,19 @@ const UserSchema = new Schema(
 
     resetPasswordOTPExpire: {
       type: Date,
-    }
+    },
+    otpRequestCount: {
+      type: Number,
+      default: 0
+    },
+    otpRequestTime: Date,
   },
   { timestamps: true }
 );
 UserSchema.pre("save", async function () {
-    if (!this.isModified("password")) return; 
+  if (!this.isModified("password")) return;
 
-    this.password = await bcrypt.hash(this.password, 10);
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
 UserSchema.methods.comparePassword = async function (enteredPassword) {

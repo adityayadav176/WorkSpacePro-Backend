@@ -135,10 +135,30 @@ const forgotPassword = asyncHandler(async (req, res) => {
         );
     }
 
+    const ONE_HOUR = 60 * 60 * 1000;
+
+    if (user.otpRequestTime && Date.now() - user.otpRequestTime > ONE_HOUR) {
+        user.otpRequestCount = 0;
+        user.otpRequestTime = Date.now();
+    }
+
+    if (!user.otpRequestTime) {
+        user.otpRequestTime = Date.now();
+    }
+
+    if (user.otpRequestCount > 3) {
+        throw new ApiError(429, "Too many OTP requests. Try again after 1 hour.");
+    }
+
+    if (user.resetPasswordOTP && user.resetPasswordOTPExpire > Date.now()) {
+        throw new ApiError(400, "OTP already sent. Please wait before requesting a new one.");
+    }
     const otp = generateOTP();
 
     user.resetPasswordOTP = await hashOTP(otp, 10);
     user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+
+    user.otpRequestCount += 1;
 
     await user.save({ validateBeforeSave: false });
 
@@ -163,7 +183,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     const user = await User.findOne({
         email,
         resetPasswordOTPExpire: { $gt: Date.now() }
-    }).select("+password"); 
+    }).select("+password");
 
     if (!user) {
         throw new ApiError(400, "Invalid or expired OTP");
